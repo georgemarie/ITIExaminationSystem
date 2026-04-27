@@ -1,0 +1,152 @@
+@model ITIExaminationSystem.ViewModels.StudentDashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewBag.StudentName = Model.StudentName;
+}
+
+<!-- ── Page Header ── -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Welcome back, <strong>@Model.StudentName</strong>! Ready to learn?</p>
+    </div>
+</div>
+
+<!-- ── Stats Row ── -->
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card stat-card--blue">
+            <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="stat-value">@Model.TotalExamsTaken</div>
+            <div class="stat-label">Exams Taken</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card stat-card--green">
+            <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+            <div class="stat-value">@Model.TotalPassed</div>
+            <div class="stat-label">Exams Passed</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card stat-card--purple">
+            <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="stat-value">@Model.AverageScore<small>%</small></div>
+            <div class="stat-label">Average Score</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Available Exams ── -->
+<div class="section-header mb-3">
+    <h2 class="section-title"><i class="fas fa-play-circle text-primary me-2"></i>Available Exams</h2>
+    <span class="section-badge">@Model.AvailableCourses.Count available</span>
+</div>
+
+@if (!Model.AvailableCourses.Any())
+{
+    <div class="empty-state mb-5">
+        <div class="empty-icon"><i class="fas fa-trophy"></i></div>
+        <h4>All Done!</h4>
+        <p>You've completed all available course exams. Check back later for new ones.</p>
+    </div>
+}
+else
+{
+    <div class="row g-4 mb-5">
+        @{
+            // Course icon emojis cycle for visual variety
+            var icons = new[] { "fa-code", "fa-database", "fa-network-wired", "fa-brain", "fa-microchip", "fa-shield-alt", "fa-cogs", "fa-laptop-code" };
+            var colors = new[] { "card-accent--blue", "card-accent--green", "card-accent--purple", "card-accent--orange", "card-accent--red", "card-accent--teal" };
+            int ci = 0;
+        }
+        @foreach (var course in Model.AvailableCourses)
+        {
+            string icon = icons[ci % icons.Length];
+            string color = colors[ci % colors.Length];
+            ci++;
+            <div class="col-sm-6 col-xl-4">
+                <div class="course-card @color">
+                    <div class="course-icon">
+                        <i class="fas @icon"></i>
+                    </div>
+                    <div class="course-body">
+                        <div class="course-name">@course.Course_Name</div>
+                        <div class="course-meta">
+                            <span><i class="fas fa-question-circle me-1"></i> 10 Questions</span>
+                            <span><i class="fas fa-clock me-1"></i> 30 min</span>
+                        </div>
+                    </div>
+                    <a asp-controller="Exam" asp-action="StartExam" asp-route-courseId="@course.Course_ID"
+                       class="btn-start-exam"
+                       onclick="return confirm('Start exam for @Html.Raw(course.Course_Name.Replace("'", "\\'"))? The timer will begin immediately.')">
+                        <i class="fas fa-play me-1"></i> Start Exam
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- ── Exam History ── -->
+<div class="section-header mb-3">
+    <h2 class="section-title"><i class="fas fa-history text-secondary me-2"></i>Exam History</h2>
+    <span class="section-badge">@Model.ExamHistory.Count completed</span>
+</div>
+
+@if (!Model.ExamHistory.Any())
+{
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+        <h4>No History Yet</h4>
+        <p>Your completed exams will appear here after submission.</p>
+    </div>
+}
+else
+{
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Exam</th>
+                    <th>Score</th>
+                    <th>Progress</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.ExamHistory)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-600 text-dark">@item.Course_Name</div>
+                        </td>
+                        <td class="text-muted small">@item.Exam_Name</td>
+                        <td>
+                            <span class="fw-600">@(item.Grade?.ToString("F0") ?? "0")</span>
+                            <span class="text-muted">/ @item.Total_Degree.ToString("F0")</span>
+                        </td>
+                        <td style="min-width:120px;">
+                            <div class="progress-bar-wrapper">
+                                <div class="progress-bar-fill @(item.IsPassed ? "fill--green" : "fill--red")"
+                                     style="width: @item.Percentage%"></div>
+                            </div>
+                            <div class="small text-muted mt-1">@item.Percentage%</div>
+                        </td>
+                        <td>
+                            @if (item.IsPassed)
+                            {
+                                <span class="status-badge status-badge--pass"><i class="fas fa-check me-1"></i>Passed</span>
+                            }
+                            else
+                            {
+                                <span class="status-badge status-badge--fail"><i class="fas fa-times me-1"></i>Failed</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,0 +1,270 @@
+@model ITIExaminationSystem.ViewModels.ExamResultViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Exam Result";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exam Result — ITI Exams</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f4f8;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 20px;
+        }
+
+        .result-wrapper {
+            width: 100%;
+            max-width: 520px;
+        }
+
+        /* ── Score Ring ── */
+        .score-ring-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 36px;
+        }
+        .score-ring {
+            position: relative;
+            width: 180px; height: 180px;
+        }
+        .score-ring svg {
+            transform: rotate(-90deg);
+        }
+        .score-ring-track { fill: none; stroke: #e2e8f0; stroke-width: 12; }
+        .score-ring-fill {
+            fill: none;
+            stroke-width: 12;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.5s ease;
+        }
+        .score-ring-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .score-pct {
+            font-size: 2.2rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .score-pct-label { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+
+        /* ── Card ── */
+        .result-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.1);
+            padding: 44px 40px;
+            text-align: center;
+        }
+        .result-icon {
+            font-size: 3rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .result-status {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .result-course {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 32px;
+        }
+
+        /* ── Breakdown row ── */
+        .breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 36px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 14px;
+        }
+        .breakdown-item { text-align: center; }
+        .breakdown-value { font-size: 1.4rem; font-weight: 700; color: #1e293b; }
+        .breakdown-label { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+
+        /* ── Pass/Fail badge ── */
+        .result-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 32px;
+        }
+        .badge--pass { background: #dcfce7; color: #16a34a; }
+        .badge--fail { background: #fee2e2; color: #dc2626; }
+
+        /* ── Actions ── */
+        .actions { display: flex; flex-direction: column; gap: 12px; }
+        .btn-dashboard {
+            display: block;
+            padding: 14px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-dashboard:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99,102,241,0.4);
+            color: white;
+        }
+
+        /* confetti container */
+        #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+    </style>
+</head>
+<body>
+
+    @if (Model.IsPassed)
+    {
+        <canvas id="confetti"></canvas>
+    }
+
+    <div class="result-wrapper">
+        <div class="result-card">
+
+            <span class="result-icon">@(Model.IsPassed ? "🎉" : "📚")</span>
+
+            <!-- Score Ring -->
+            <div class="score-ring-container">
+                <div class="score-ring">
+                    <svg width="180" height="180" viewBox="0 0 180 180">
+                        <circle class="score-ring-track" cx="90" cy="90" r="78" />
+                        <circle class="score-ring-fill"
+                                id="ringFill"
+                                cx="90" cy="90" r="78"
+                                stroke="@(Model.IsPassed ? "#22c55e" : "#ef4444")"
+                                stroke-dasharray="@(2 * Math.PI * 78)"
+                                stroke-dashoffset="@(2 * Math.PI * 78)" />
+                    </svg>
+                    <div class="score-ring-center">
+                        <div class="score-pct" style="color: @(Model.IsPassed ? "#22c55e" : "#ef4444")">
+                            @Model.Percentage<small style="font-size:1rem">%</small>
+                        </div>
+                        <div class="score-pct-label">Score</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-status">@Model.StatusMessage</div>
+            @if (!string.IsNullOrEmpty(Model.CourseName))
+            {
+                <div class="result-course"><i class="fas fa-book me-1"></i> @Model.CourseName</div>
+            }
+
+            <div class="result-badge @(Model.IsPassed ? "badge--pass" : "badge--fail")">
+                <i class="fas @(Model.IsPassed ? "fa-check-circle" : "fa-times-circle")"></i>
+                @(Model.IsPassed ? "PASSED" : "FAILED")
+            </div>
+
+            <!-- Score Breakdown -->
+            <div class="breakdown">
+                <div class="breakdown-item">
+                    <div class="breakdown-value">@Model.Grade.ToString("F0")</div>
+                    <div class="breakdown-label">Your Score</div>
+                </div>
+                <div class="breakdown-item">
+                    <div class="breakdown-value">@Model.TotalDegree.ToString("F0")</div>
+                    <div class="breakdown-label">Total Marks</div>
+                </div>
+                <div class="breakdown-item">
+                    <div class="breakdown-value">50%</div>
+                    <div class="breakdown-label">Pass Mark</div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="actions">
+                <a asp-controller="Student" asp-action="Index" class="btn-dashboard">
+                    <i class="fas fa-home me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Animate the score ring on load
+        window.addEventListener('load', () => {
+            const circumference = 2 * Math.PI * 78;
+            const pct = @Model.Percentage / 100;
+            const offset = circumference * (1 - pct);
+
+            setTimeout(() => {
+                document.getElementById('ringFill').style.strokeDashoffset = offset;
+            }, 200);
+        });
+
+        @if (Model.IsPassed)
+        {
+            <text>
+            // Simple confetti animation for passed students
+            (function() {
+                const canvas = document.getElementById('confetti');
+                const ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                const colors = ['#6366f1','#22c55e','#f59e0b','#ec4899','#3b82f6','#8b5cf6'];
+                const particles = Array.from({length: 120}, () => ({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    r: Math.random() * 6 + 3,
+                    d: Math.random() * 120,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    tilt: Math.floor(Math.random() * 10) - 10,
+                    tiltAngle: 0,
+                    tiltAngleSpeed: Math.random() * 0.1 + 0.05
+                }));
+
+                let angle = 0, frame = 0;
+                function draw() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    angle += 0.01;
+                    particles.forEach(p => {
+                        p.tiltAngle += p.tiltAngleSpeed;
+                        p.y += (Math.cos(angle + p.d) + 2) * 1.2;
+                        p.x += Math.sin(angle) * 1.5;
+                        p.tilt = Math.sin(p.tiltAngle) * 15;
+                        ctx.beginPath();
+                        ctx.lineWidth = p.r / 2;
+                        ctx.strokeStyle = p.color;
+                        ctx.moveTo(p.x + p.tilt + p.r / 4, p.y);
+                        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 4);
+                        ctx.stroke();
+                    });
+                    frame++;
+                    if (frame < 200) requestAnimationFrame(draw);
+                }
+                draw();
+            })();
+            </text>
+        }
+    </script>
+</body>
+</html>

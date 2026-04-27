@@ -1,0 +1,425 @@
+@model ITIExaminationSystem.ViewModels.TakeExamViewModel
+@{
+    Layout = null; // Full-screen exam mode — no sidebar
+    ViewData["Title"] = "Exam in Progress";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@Model.CourseName Exam — ITI Exams</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f4f8;
+            margin: 0;
+            padding-bottom: 100px;
+        }
+
+        /* ── Sticky Exam Header ── */
+        .exam-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #1e1b4b;
+            color: white;
+            padding: 14px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .exam-header-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .exam-title-group { min-width: 0; }
+        .exam-name {
+            font-size: 1rem;
+            font-weight: 700;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .exam-course { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+
+        /* ── Timer ── */
+        .timer-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1.5px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 8px 18px;
+            min-width: 140px;
+            justify-content: center;
+        }
+        .timer-icon { font-size: 1.1rem; }
+        .timer-display {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 2px;
+        }
+        .timer-box.warning { background: rgba(234,179,8,0.25); border-color: #eab308; }
+        .timer-box.danger  { background: rgba(239,68,68,0.25);  border-color: #ef4444; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+
+        /* Progress */
+        .progress-section {
+            max-width: 860px;
+            margin: 20px auto 0;
+            padding: 0 20px;
+        }
+        .prog-info { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem; color: #64748b; }
+        .prog-bar { height: 6px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
+        .prog-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #6366f1, #8b5cf6); transition: width 0.3s; }
+
+        /* ── Question Card ── */
+        .questions-area {
+            max-width: 860px;
+            margin: 28px auto 0;
+            padding: 0 20px;
+        }
+        .q-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+        .q-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .q-card.answered { border-left: 4px solid #6366f1; }
+
+        .q-header {
+            padding: 14px 22px;
+            background: #f8fafc;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .q-number {
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            background: #6366f1;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .q-type-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 99px;
+            background: #f1f0ff;
+            color: #6366f1;
+        }
+        .q-answered-mark {
+            margin-left: auto;
+            color: #22c55e;
+            font-size: 0.85rem;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .q-card.answered .q-answered-mark { opacity: 1; }
+
+        .q-body { padding: 20px 22px; }
+        .q-text {
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: #1e293b;
+            line-height: 1.65;
+            margin-bottom: 20px;
+        }
+
+        /* ── Choice Items ── */
+        .choices-list { display: flex; flex-direction: column; gap: 10px; }
+        .choice-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 13px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+        }
+        .choice-item:hover { border-color: #c7d2fe; background: #f5f3ff; }
+        .choice-item.selected { border-color: #6366f1; background: #eef2ff; }
+
+        .choice-radio {
+            width: 20px; height: 20px;
+            border: 2px solid #d1d5db;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.15s;
+        }
+        .choice-item.selected .choice-radio {
+            border-color: #6366f1;
+            background: #6366f1;
+        }
+        .choice-radio-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .choice-item.selected .choice-radio-dot { opacity: 1; }
+
+        .choice-code {
+            width: 24px; height: 24px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .choice-item.selected .choice-code { background: #c7d2fe; color: #4338ca; }
+        .choice-text { font-size: 0.95rem; color: #374151; flex: 1; }
+
+        /* Hidden real radio inputs (we use custom UI) */
+        input[type="radio"] { display: none; }
+
+        /* ── Sticky Submit Footer ── */
+        .exam-footer {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            padding: 14px 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+            z-index: 100;
+        }
+        .exam-footer-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .answered-counter { font-size: 0.9rem; color: #64748b; }
+        .answered-counter strong { color: #6366f1; font-weight: 700; }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(34,197,94,0.4);
+        }
+        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+        /* Unanswered warning */
+        .unanswered-warning {
+            display: none;
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            color: #92400e;
+            max-width: 860px;
+            margin: 0 auto 10px;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── Exam Header with Timer ── -->
+    <div class="exam-header">
+        <div class="exam-header-inner">
+            <div class="exam-title-group">
+                <div class="exam-name"><i class="fas fa-pen-to-square me-2"></i>@Model.ExamName</div>
+                <div class="exam-course">@Model.CourseName</div>
+            </div>
+            <div class="timer-box" id="timerBox">
+                <i class="fas fa-clock timer-icon"></i>
+                <div class="timer-display" id="timerDisplay">--:--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Progress Bar ── -->
+    <div class="progress-section">
+        <div class="prog-info">
+            <span id="progressText">0 of @Model.Questions.Count answered</span>
+            <span id="progressPct">0%</span>
+        </div>
+        <div class="prog-bar">
+            <div class="prog-fill" id="progressFill" style="width:0%"></div>
+        </div>
+    </div>
+
+    <!-- ── Questions ── -->
+    <form id="examForm" action="/Exam/SubmitExam" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="examId" value="@Model.ExamId" />
+
+        <div class="questions-area">
+            @for (int i = 0; i < Model.Questions.Count; i++)
+            {
+                var q = Model.Questions[i];
+                <div class="q-card" id="qcard-@q.Q_ID" data-qid="@q.Q_ID">
+                    <div class="q-header">
+                        <div class="q-number">@(i + 1)</div>
+                        <span class="q-type-badge">@(q.Q_Type == "MCQ" ? "Multiple Choice" : "True / False")</span>
+                        <div class="q-answered-mark ms-auto">
+                            <i class="fas fa-check-circle me-1"></i> Answered
+                        </div>
+                    </div>
+                    <div class="q-body">
+                        <p class="q-text">@q.Q_Text</p>
+                        <div class="choices-list">
+                            @foreach (var c in q.Choices)
+                            {
+                                <!-- Hidden real radio for form submission -->
+                                <input type="radio"
+                                       id="radio_@(q.Q_ID)_@c.Choice_Code"
+                                       name="ans_@q.Q_ID"
+                                       value="@c.Choice_Code" />
+
+                                <!-- Custom styled choice -->
+                                <label class="choice-item"
+                                       for="radio_@(q.Q_ID)_@c.Choice_Code"
+                                       onclick="selectChoice(@q.Q_ID, '@c.Choice_Code', this)">
+                                    <div class="choice-radio">
+                                        <div class="choice-radio-dot"></div>
+                                    </div>
+                                    <div class="choice-code">@c.Choice_Code</div>
+                                    <div class="choice-text">@c.Choice_Text</div>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- ── Sticky Footer ── -->
+        <div class="exam-footer">
+            <div class="exam-footer-inner">
+                <div class="answered-counter">
+                    <strong id="answeredCount">0</strong> / @Model.Questions.Count answered
+                </div>
+                <button type="submit" class="btn-submit" id="submitBtn" onclick="return confirmSubmit()">
+                    <i class="fas fa-paper-plane"></i> Submit Exam
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        // ── Timer ──────────────────────────────────────────────────────────
+        const DURATION_SECONDS = @Model.DurationMinutes * 60;
+        let secondsLeft = DURATION_SECONDS;
+        const timerDisplay = document.getElementById('timerDisplay');
+        const timerBox = document.getElementById('timerBox');
+
+        function formatTime(secs) {
+            const m = Math.floor(secs / 60).toString().padStart(2, '0');
+            const s = (secs % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function tickTimer() {
+            timerDisplay.textContent = formatTime(secondsLeft);
+
+            if (secondsLeft <= 300 && secondsLeft > 60) {
+                timerBox.className = 'timer-box warning'; // yellow at 5 min
+            } else if (secondsLeft <= 60) {
+                timerBox.className = 'timer-box danger'; // red at 1 min
+            }
+
+            if (secondsLeft <= 0) {
+                // Time is up — auto submit
+                clearInterval(timerInterval);
+                timerDisplay.textContent = '00:00';
+                alert('⏰ Time is up! Your exam is being submitted automatically.');
+                document.getElementById('examForm').submit();
+                return;
+            }
+            secondsLeft--;
+        }
+
+        tickTimer(); // render immediately
+        const timerInterval = setInterval(tickTimer, 1000);
+
+        // ── Answered counter & progress bar ───────────────────────────────
+        const TOTAL_QUESTIONS = @Model.Questions.Count;
+        const answeredSet = new Set();
+
+        function updateProgress() {
+            const count = answeredSet.size;
+            document.getElementById('answeredCount').textContent = count;
+            document.getElementById('progressText').textContent = `${count} of ${TOTAL_QUESTIONS} answered`;
+            const pct = Math.round(count / TOTAL_QUESTIONS * 100);
+            document.getElementById('progressPct').textContent = pct + '%';
+            document.getElementById('progressFill').style.width = pct + '%';
+        }
+
+        // ── Custom choice selection ────────────────────────────────────────
+        function selectChoice(qId, code, labelEl) {
+            // Deselect all choices in this question
+            const card = document.getElementById('qcard-' + qId);
+            card.querySelectorAll('.choice-item').forEach(el => el.classList.remove('selected'));
+
+            // Select clicked
+            labelEl.classList.add('selected');
+
+            // Mark question card as answered
+            card.classList.add('answered');
+            answeredSet.add(qId);
+            updateProgress();
+        }
+
+        // ── Submit confirmation ────────────────────────────────────────────
+        function confirmSubmit() {
+            const unanswered = TOTAL_QUESTIONS - answeredSet.size;
+            if (unanswered > 0) {
+                return confirm(`⚠️ You have ${unanswered} unanswered question(s).\n\nUnanswered questions will be counted as wrong.\n\nDo you want to submit anyway?`);
+            }
+            return confirm('Are you sure you want to submit your exam? This cannot be undone.');
+        }
+
+        // Warn before leaving the page accidentally
+        window.addEventListener('beforeunload', (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+        });
+
+        // Remove unload warning when submitting
+        document.getElementById('examForm').addEventListener('submit', () => {
+            window.onbeforeunload = null;
+        });
+    </script>
+</body>
+</html>
