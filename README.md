@@ -1,6 +1,6 @@
 ## 🎓 Online Examination System
 
-A full-stack web application for conducting secure, timed, and randomized MCQ exams with instant results.
+A full-stack web application built with **.NET** for conducting secure, timed, and randomized MCQ exams with instant results.
 
 ---
 
@@ -28,10 +28,6 @@ The system allows students to take online exams with:
 
 - 🔒 **One Attempt Policy**  
   Enforced at both application and database levels.
-
+  
 - 🏗️ **Clean Architecture**  
   Separation of concerns using Service Layer, Interfaces, and ViewModels with thin controllers.
-
-- Ahmed Ali  
-- George Mariey  
-- Hana Mohamed
